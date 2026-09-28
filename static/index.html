@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- 内联图标：避免浏览器去请求 /favicon.ico 而报 404 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='25' x='2' font-size='24' fill='%23c9a86a'%3E%E5%8D%A6%3C/text%3E%3C/svg%3E" />
+<title>问命 · 八字 梅花 六爻</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --line: #2a2f3a;
+    --text: #e8e6e3; --muted: #9aa0a6; --accent: #c9a86a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.7; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 26px; text-align: center; color: var(--accent); letter-spacing: 4px; }
+  .sub { text-align: center; color: var(--muted); margin: 6px 0 28px; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; margin-bottom: 20px; }
+  label { display: block; margin: 12px 0 4px; font-size: 13px; color: var(--muted); }
+  input, select, button, textarea { width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--line);
+         background: #1d2129; color: var(--text); font-size: 14px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  /* 浏览器自动填充会强制刷成白底黑字，破坏暗色主题；已用 autocomplete="off"
+     禁用，这里再兜底改回深色，防止个别浏览器忽略该属性 */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px #1d2129 inset;
+    box-shadow: 0 0 0 1000px #1d2129 inset;
+    caret-color: var(--text);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  button.primary { margin-top: 18px; background: var(--accent); color: #141414; font-weight: 600;
+        border: none; cursor: pointer; letter-spacing: 2px; }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: #1d2129; color: var(--accent); cursor: pointer; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .table th, .table td { border: 1px solid var(--line); padding: 6px 8px; text-align: center; font-size: 14px; }
+  .table th { color: var(--accent); font-weight: normal; }
+  .pillar { font-size: 20px; letter-spacing: 2px; color: var(--text); }
+  .meta { color: var(--muted); font-size: 13px; }
+  .reading { white-space: pre-wrap; font-size: 15px; }
+  .verdict { white-space: pre-wrap; font-size: 16px; line-height: 1.85; }
+  .card.verdict-card { border-left: 3px solid var(--accent); }
+  .tag { display: inline-block; background: #1f2530; color: var(--accent); border: 1px solid var(--line);
+         padding: 2px 10px; border-radius: 20px; font-size: 12px; margin: 3px 4px 0 0; }
+  .source { border-top: 1px dashed var(--line); padding: 10px 0 0; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .source b { color: var(--accent); }
+  .error { color: #e07b7b; border: 1px solid #6b3434; background: #261a1a; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+  .demo-note { color: #d8a657; font-size: 13px; }
+  .hidden { display: none; }
+  .bubble { padding: 10px 14px; border-radius: 10px; margin: 8px 0; font-size: 14px; white-space: pre-wrap; }
+  .bubble.user { background: #222833; border: 1px solid var(--line); }
+  .bubble.reply { background: #1b2029; border-left: 3px solid var(--accent); }
+  .ask { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 14px; }
+  .ask button.primary { margin: 0; width: auto; padding: 9px 20px; letter-spacing: 1px; }
+  .rewritten { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* 方法选择 */
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tab { background: #1d2129; border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+         padding: 12px 8px; border-radius: 8px; font-size: 15px; letter-spacing: 2px; }
+  .tab small { display: block; font-size: 11px; letter-spacing: 0; color: var(--muted); margin-top: 2px; }
+  .tab.active { border-color: var(--accent); color: var(--accent); background: #20242c; }
+  .tab.active small { color: var(--accent); }
+
+  /* 卦画 */
+  .gua { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center;
+         background: #1b1f27; border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .yao { display: flex; gap: 8px; align-items: center; margin: 5px 0; }
+  .yao .bar { display: flex; gap: 8px; }
+  .yao .bar i { display: block; height: 9px; border-radius: 2px; background: #cfc9bd; }
+  .yao.yang .bar i { width: 78px; }
+  .yao.yin .bar i { width: 35px; }
+  .yao .mark { width: 16px; font-size: 12px; color: var(--accent); }
+  .yao.dong .bar i { background: var(--accent); }
+  .yao.shi .bar i { background: #8ab4c9; }
+  .yao-labels { font-size: 12px; color: var(--muted); }
+  .trigram { font-size: 26px; color: var(--accent); letter-spacing: 2px; }
+
+  /* 工具类 */
+  .span2 { grid-column: span 2; }              /* 三列栅格里跨两列 */
+  .table-scroll { overflow-x: auto; }          /* 列数多的表格：窄屏可横向滑动 */
+  .table-scroll .table { min-width: max-content; }
+
+  /* ---------- 移动端（窄屏）：栅格降为单列，表格可横滑 ---------- */
+  @media (max-width: 640px) {
+    html { -webkit-text-size-adjust: 100%; }
+    .wrap { padding: 22px 14px 60px; }
+    .card { padding: 16px 14px; }
+    h1 { font-size: 22px; letter-spacing: 3px; }
+    .sub { margin-bottom: 20px; }
+
+    /* 所有栅格改单列堆叠（表单与结果区一并处理） */
+    .row, .row3 { grid-template-columns: 1fr; }
+    .row3 .span2 { grid-column: auto; }
+
+    /* 输入框字号须 ≥16px，否则 iOS 聚焦时会自动放大整页 */
+    input, select, button, textarea { font-size: 16px; }
+
+    /* 方法选择：保持三列一行，仅缩字号并隐去说明小字 */
+    .tabs { gap: 6px; }
+    .tab { font-size: 13px; letter-spacing: 0; padding: 10px 4px; }
+    #tabs .tab small { display: none; }
+
+    /* 卦画缩小，避免在窄屏溢出 */
+    .gua { padding: 12px; gap: 12px; }
+    .yao .bar { gap: 6px; }
+    .yao.yang .bar i { width: 56px; }
+    .yao.yin .bar i { width: 25px; }
+    .trigram { font-size: 20px; }
+
+    /* 表格与正文可读性微调 */
+    .table th, .table td { padding: 5px 6px; font-size: 13px; }
+    .pillar { font-size: 17px; letter-spacing: 1px; }
+    .reading { font-size: 16px; }
+    .bubble { font-size: 15px; }
+    .ask button.primary { padding: 9px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>问 命</h1>
+  <div class="sub">八字命理 · 梅花易数 · 六爻纳甲</div>
+
+  <div class="card">
+    <label style="margin-top:0">一、先选起卦方法</label>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-method="bazi">八字命理<small>看一生格局，需出生时间</small></button>
+      <button class="tab" data-method="meihua">梅花易数<small>看一事之机，时间或报数起卦</small></button>
+      <button class="tab" data-method="liuyao">六爻纳甲<small>看一事成败，摇卦成卦</small></button>
+    </div>
+
+    <!-- 八字 -->
+    <form id="form-bazi" class="method-form" autocomplete="off">
+      <label>二、生辰信息</label>
+      <div class="row">
+        <div><label>出生日期</label><input type="date" id="birthDate" value="1995-08-24" /></div>
+        <div><label>出生时间（北京时间，精确到分）</label><input type="time" id="birthTime" value="14:30" step="60" /></div>
+      </div>
+      <div class="row">
+        <div>
+          <label>出生地点</label>
+          <select id="city" class="city"></select>
+          <div class="hint">选择城市自动填经纬度，或选“自定义”手工填写</div>
+        </div>
+        <div class="row3">
+          <div><label>经度</label><input type="number" id="longitude" step="0.01" /></div>
+          <div><label>纬度</label><input type="number" id="latitude" step="0.01" /></div>
+          <div><label>性别</label>
+            <select id="gender"><option value="">未知</option><option value="male">男</option><option value="female">女</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px">
+        <label style="display:inline-block;margin:0"><input type="checkbox" id="trueSolar" checked style="width:auto" /> 做真太阳时校正（经度平太阳时近似）</label>
+      </div>
+      <button type="submit" class="primary" id="btnBazi">排 盘 问 命</button>
+    </form>
+
+    <!-- 梅花易数 -->
+    <form id="form-meihua" class="method-form hidden" autocomplete="off">
+      <label>二、所占之事</label>
+      <input id="mhQuestion" maxlength="200" autocomplete="off" placeholder="例如：这份工作能不能拿到？今年适合换房吗？" />
+      <label>起卦方式</label>
+      <div class="tabs" id="mhKinds" style="grid-template-columns:1fr 1fr">
+        <button type="button" class="tab active" data-kind="time">时间起卦<small>以起卦时刻的农历年月日时取数</small></button>
+        <button type="button" class="tab" data-kind="number">报数起卦<small>心中默念所占之事，随意报数</small></button>
+      </div>
+      <div id="mhTimeBox">
+        <div class="row">
+          <div>
+            <label>起卦地点（可选，用于真太阳时）</label>
+            <select id="mhCity" class="city"></select>
+          </div>
+          <div class="row3">
+            <div><label>经度</label><input type="number" id="mhLongitude" step="0.01" /></div>
+            <div class="span2"><label>起卦时间（留空＝当下）</label><input type="datetime-local" id="mhWhen" /></div>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:10px">
+          <label style="display:inline-block;margin:0"><input type="checkbox" id="mhTrueSolar" checked style="width:auto" /> 做真太阳时校正</label>
+        </div>
+      </div>
+      <div id="mhNumberBox" class="hidden">
+        <div class="row3">
+          <div><label>数字一（定上卦）</label><input type="number" id="mhN1" min="1" value="17" /></div>
+          <div><label>数字二（定下卦）</label><input type="number" id="mhN2" min="1" value="8" /></div>
+          <div><label>数字三（可空，直取动爻）</label><input type="number" id="mhN3" min="1" /></div>
+        </div>
+        <div class="hint">两数之和取动爻；填了第三数则以第三数取动爻</div>
+      </div>
+      <button type="submit" class="primary" id="btnMeihua">起 卦 断 事</button>
+    </form>
+
+    <!-- 六爻 -->
+    <form id="form-liuyao" class="method-form hidden" autocomplete="off">
+      <label>二、所占之事</label>
+      <input id="lyQuestion" maxlength="200" autocomplete="off" placeholder="例如：这笔钱能不能赚到？考试能否通过？" />
+      <div class="row" style="align-items:start">
+        <div>
+          <label>三、摇卦（自初爻至上爻，可手工录入）</label>
+          <div id="lyRows"></div>
+          <button type="button" class="ghost" id="btnToss" style="margin-top:10px">一 键 摇 卦（三枚铜钱掷六次）</button>
+          <div class="hint">三背＝老阳（动）、两背＝少阳、一背＝少阴、三字＝老阴（动）</div>
+        </div>
+        <div>
+          <label>卦画预览</label>
+          <div class="gua" id="lyPreview"><div class="hint">点「一键摇卦」或选择各爻后显示</div></div>
+          <label>起卦时间（留空＝当下）</label>
+          <input type="datetime-local" id="lyWhen" />
+        </div>
+      </div>
+      <button type="submit" class="primary" id="btnLiuyao">摇 卦 断 事</button>
+    </form>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function errMessage(r) {
+  const data = await r.json().catch(() => ({}));
+  const d = data.detail;
+  return Array.isArray(d) ? d.map(x => x.msg).join('；') : (d || `HTTP ${r.status}`);
+}
+
+const api = async (path, opts) => {
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(await errMessage(r));
+  return data;
+};
+
+/* ---------- SSE 流式请求：按事件名分发 meta / delta / done / error ---------- */
+function parseFrame(frame) {
+  let event = null, data = null;
+  for (const line of frame.split('\n')) {
+    if (line.startsWith('event: ')) event = line.slice(7).trim();
+    else if (line.startsWith('data: ')) {
+      try { data = JSON.parse(line.slice(6)); } catch (_) { /* 忽略半包 */ }
+    }
+  }
+  return event ? { event, data } : null;
+}
+
+async function streamRequest(path, payload, handlers) {
+  const r = await fetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(await errMessage(r));
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      const ev = parseFrame(buf.slice(0, idx));
+      buf = buf.slice(idx + 2);
+      if (ev && handlers[ev.event]) handlers[ev.event](ev.data);
+    }
+  }
+}
+
+/* ---------- 方法选择 ---------- */
+const METHOD_BTN = { bazi: '排 盘 问 命', meihua: '起 卦 断 事', liuyao: '摇 卦 断 事' };
+let method = 'bazi';
+let currentSession = null;
+
+$('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  method = btn.dataset.method;
+  document.querySelectorAll('#tabs .tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.method-form').forEach(f =>
+    f.classList.toggle('hidden', f.id !== 'form-' + method));
+  $('result').innerHTML = '';
+  currentSession = null;
+});
+
+/* ---------- 八字表单 ---------- */
+async function loadCities() {
+  try {
+    const { cities } = await api('/api/cities');
+    document.querySelectorAll('select.city').forEach((sel) => {
+      sel.innerHTML = '';
+      cities.forEach((c) => {
+        const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+      });
+      const custom = document.createElement('option');
+      custom.value = '__custom__'; custom.textContent = '自定义';
+      sel.appendChild(custom);
+      sel.value = '北京';
+      sel.addEventListener('change', () => fillCoord(sel));
+      fillCoord(sel);
+    });
+  } catch (e) { console.error(e); }
+}
+
+async function fillCoord(sel) {
+  const lonId = sel.id === 'mhCity' ? 'mhLongitude' : 'longitude';
+  if (sel.value === '__custom__') return;
+  const info = await api('/api/info?city=' + encodeURIComponent(sel.value));
+  if (info.longitude !== null) $(lonId).value = info.longitude;
+  if (sel.id === 'city' && info.latitude !== null) $('latitude').value = info.latitude;
+}
+
+function unlocked(btn, label) {
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+}
+
+$('form-bazi').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('btnBazi');
+  btn.disabled = true; btn.textContent = '推演中…';
+  $('result').innerHTML = '<div class="card">正在排盘，参酌古籍…</div>';
+  try {
+    await runReading('/api/fate', {
+      datetime: `${$('birthDate').value}T${$('birthTime').value}:00`,
+      longitude: parseFloat($('longitude').value) || null,
+      latitude: parseFloat($('latitude').value) || null,
+      use_true_solar_time: $('trueSolar').checked,
+      gender: $('gender').value || null,
+    }, (m) => renderBaziChart(m.bazi));
+  } catch (err) {
+    $('result').innerHTML = `<div class="error">${err.message}</div>`;
+  } finally { unlocked(btn, METHOD_BTN.bazi); }
+});
+
+/* ---------- 梅花易数表单 ---------- */
+let mhKind = 'time';
+$('mhKinds').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  mhKind = btn.dataset.kind;
+  document.querySelectorAll('#mhKinds .tab').forEach(b => b.classList.toggle('active', b === btn));
+  $('mhTimeBox').classList.toggle('hidden', mhKind !== 'time');
+  $('mhNumberBox').classList.toggle('hidden', mhKind !== 'number');
+});
+
+$('form-meihua').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('btnMeihua');
+  const question = $('mhQuestion').value.trim();
+  if (!question) { $('result').innerHTML = '<div class="error">请先写下所占之事</div>'; return; }
+  btn.disabled = true; btn.textContent = '推演中…';
+  $('result').innerHTML = '<div class="card">正在起卦，参酌《梅花易数》…</div>';
+  const payload = { question, kind: mhKind };
+  if (mhKind === 'number') {
+    const nums = [$('mhN1').value, $('mhN2').value, $('mhN3').value]
+      .filter(v => v !== '').map(v => parseInt(v, 10));
+    payload.numbers = nums;
+  } else {
+    payload.when = $('mhWhen').value ? $('mhWhen').value + ':00' : null;
+    payload.longitude = parseFloat($('mhLongitude').value) || null;
+    payload.use_true_solar_time = $('mhTrueSolar').checked;
+  }
+  try {
+    await runReading('/api/meihua', payload, (m) => renderMeihuaChart(m.chart));
+  } catch (err) {
+    $('result').innerHTML = `<div class="error">${err.message}</div>`;
+  } finally { unlocked(btn, METHOD_BTN.meihua); }
+});
+
+/* ---------- 六爻表单 ---------- */
+const YAO_OPTIONS = [[9, '老阳（重○，动）'], [8, '少阴（拆）'], [7, '少阳（单）'], [6, '老阴（交×，动）']];
+const YAO_LABELS = ['上爻', '五爻', '四爻', '三爻', '二爻', '初爻'];
+
+function buildYaoRows() {
+  const box = $('lyRows');
+  box.innerHTML = YAO_LABELS.map((name, i) => `
+    <div style="display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center;margin:6px 0">
+      <span class="yao-labels">${name}</span>
+      <select class="ly-yao" data-pos="${6 - i}">
+        ${YAO_OPTIONS.map(([v, t]) => `<option value="${v}"${v === 7 ? ' selected' : ''}>${t}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  box.addEventListener('change', previewLiuyao);
+  previewLiuyao();
+}
+
+function yaoValues() {
+  const vals = [0, 0, 0, 0, 0, 0];
+  document.querySelectorAll('.ly-yao').forEach((sel) => { vals[+sel.dataset.pos - 1] = +sel.value; });
+  return vals;
+}
+
+/** 卦画 HTML：lines 自下而上，highlights 为需高亮的爻位集合 */
+function guaLinesHtml(lines, highlights = {}, markOf = () => '') {
+  return lines.map((l, i) => i).reverse().map((i) => {
+    const on = highlights[i + 1];
+    return `<div class="yao ${lines[i] ? 'yang' : 'yin'} ${on ? 'dong' : ''}">
+      <span class="mark">${on || ''}</span>
+      <span class="bar"><i></i>${lines[i] ? '' : '<i></i>'}</span>
+      <span class="mark">${markOf(i + 1)}</span>
+    </div>`;
+  }).join('');
+}
+
+function previewLiuyao() {
+  const vals = yaoValues();
+  const lines = vals.map(v => (v === 7 || v === 9 ? 1 : 0));
+  const marks = {};
+  vals.forEach((v, i) => { if (v === 6 || v === 9) marks[i + 1] = v === 9 ? '○' : '×'; });
+  $('lyPreview').innerHTML = guaLinesHtml(lines, marks);
+}
+
+$('btnToss').addEventListener('click', () => {
+  // 三枚铜钱掷一次：背数 0/1/2/3 的概率为 1/8、3/8、3/8、1/8
+  const pick = () => {
+    const r = Math.random();
+    if (r < 1 / 8) return 6;    // 三字 → 老阴（动）
+    if (r < 4 / 8) return 8;    // 一背二字 → 少阴
+    if (r < 7 / 8) return 7;    // 二背一字 → 少阳
+    return 9;                   // 三背 → 老阳（动）
+  };
+  document.querySelectorAll('.ly-yao').forEach((sel) => { sel.value = pick(); });
+  previewLiuyao();
+});
+
+$('form-liuyao').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('btnLiuyao');
+  const question = $('lyQuestion').value.trim();
+  if (!question) { $('result').innerHTML = '<div class="error">请先写下所占之事</div>'; return; }
+  btn.disabled = true; btn.textContent = '推演中…';
+  $('result').innerHTML = '<div class="card">正在装卦，参酌《增删卜易》…</div>';
+  try {
+    await runReading('/api/liuyao', {
+      question,
+      yaos: yaoValues(),
+      when: $('lyWhen').value ? $('lyWhen').value + ':00' : null,
+    }, (m) => renderLiuyaoChart(m.chart));
+  } catch (err) {
+    $('result').innerHTML = `<div class="error">${err.message}</div>`;
+  } finally { unlocked(btn, METHOD_BTN.liuyao); }
+});
+
+/* ---------- 结果渲染 ---------- */
+function sourcesCard(d) {
+  const sources = d.sources.map(s =>
+    `<div class="source"><b>《${s.book}·${s.chapter}》</b><br>${s.snippet}</div>`).join('');
+  return `<div class="card"><h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">引据（${d.sources.length}）</h2>${sources || '<div class="meta">（古籍未见直接记载）</div>'}</div>`;
+}
+
+function chatCard() {
+  return `<div class="card"><h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">追问</h2>
+      <div id="chatLog"></div>
+      <div class="ask">
+        <input id="chatInput" maxlength="300" autocomplete="off" placeholder="例如：那婚姻呢？事业财运如何？" />
+        <button class="primary" id="btnAsk">追 问</button>
+      </div>
+      <div class="hint">追问会结合卦象与上文一并推演</div>
+    </div>`;
+}
+
+function demoNoteHtml() {
+  return '<div class="demo-note">⚠ 示例输出：当前未接入解说服务，以下仅为卦象与古籍片段的罗列。</div>';
+}
+
+/** 追加一张空卡片（含标题），返回可逐字写入的容器。 */
+function beginCard(title, bodyCls, cardCls = '') {
+  const card = document.createElement('div');
+  card.className = `card ${cardCls}`;
+  card.innerHTML = `<h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">${title}</h2>
+    <div class="demo-slot"></div><div class="${bodyCls}"></div>`;
+  $('result').appendChild(card);
+  return { card, demoSlot: card.querySelector('.demo-slot'), body: card.querySelector('.' + bodyCls) };
+}
+
+/** 收尾：追加引据与追问区，并绑定追问事件。 */
+function finishCards(d) {
+  $('result').innerHTML += sourcesCard(d) + chatCard();
+  $('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
+  $('btnAsk').addEventListener('click', ask);
+}
+
+/** 首轮解读的通用流式流程：meta 出卦象卡片 → 结论/解读按需建卡并分流 → done 收尾。 */
+async function runReading(path, payload, renderChart) {
+  let verdict = null, reading = null;
+  // 卡片按需创建：后端没有分段（section）时就不会留下空的「结论」板
+  const ensureVerdict = () => {
+    if (!verdict) {
+      verdict = beginCard('结论', 'verdict', 'verdict-card');
+      // 若详解卡片先到，把结论插到它上方，保证「结论在上、解读在下」
+      if (reading) $('result').insertBefore(verdict.card, reading.card);
+    }
+    return verdict;
+  };
+  const ensureReading = () => (reading ||= beginCard('解读', 'reading'));
+
+  await streamRequest(path, { ...payload, stream: true }, {
+    meta: (m) => {
+      currentSession = m.session_id;
+      $('result').innerHTML = '';
+      renderChart(m);
+    },
+    delta: (d) => {
+      const target = d.section === 'verdict' ? ensureVerdict() : ensureReading();
+      target.body.textContent += d.text;
+    },
+    done: (d) => {
+      if (verdict && d.demo) verdict.demoSlot.innerHTML = demoNoteHtml();
+      finishCards(d);
+    },
+    error: (d) => {
+      $('result').insertAdjacentHTML('beforeend', `<div class="error">${d.message}</div>`);
+    },
+  });
+}
+
+function renderBaziChart(b) {
+  const wuxingHtml = Object.entries(b.wuxing).map(([k, v]) => `<span class="tag">${k}${v}</span>`).join('');
+  const solar = b.true_solar_time ? `<div class="meta">经真太阳时校正后：${b.true_solar_time}</div>` : '';
+  $('result').innerHTML = `
+    <div class="card">
+      <h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">命盘</h2>
+      <div class="meta">农历：${b.lunar_date}</div>
+      <div class="meta">日主五行：${b.day_master}　${wuxingHtml}</div>
+      ${solar}
+      <div class="table-scroll">
+        <table class="table">
+          <tr><th></th><th>年柱</th><th>月柱</th><th>日柱</th><th>时柱</th></tr>
+          <tr><th>干支</th><td class="pillar">${b.year}</td><td class="pillar">${b.month}</td><td class="pillar">${b.day}</td><td class="pillar">${b.hour}</td></tr>
+          <tr><th>纳音</th><td>${b.year_na_yin}</td><td>${b.month_na_yin}</td><td>${b.day_na_yin}</td><td>${b.hour_na_yin}</td></tr>
+          <tr><th>十神</th><td>${b.ten_gods.year || '-'}</td><td>${b.ten_gods.month || '-'}</td><td>日主</td><td>${b.ten_gods.hour || '-'}</td></tr>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderMeihuaChart(c) {
+  const marks = {}; marks[c.dong_yao] = c.ben_lines[c.dong_yao - 1] ? '○' : '×';
+  $('result').innerHTML = `
+    <div class="card">
+      <h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">卦象 · 梅花易数</h2>
+      <div class="meta">${c.kind === 'time' ? '时间起卦' : '报数起卦'}：${c.seed_text}</div>
+      ${c.lunar_text ? `<div class="meta">起卦农历：${c.lunar_text}（${c.cast_time}）</div>` : `<div class="meta">起卦时间：${c.cast_time}</div>`}
+      ${c.note ? `<div class="meta">${c.note}</div>` : ''}
+      <div class="row" style="margin-top:12px;align-items:start">
+        <div class="gua">
+          <div>
+            <div class="trigram">${c.shang_symbol} ${c.shang_gua}</div>
+            <div class="trigram" style="margin-top:22px">${c.xia_symbol} ${c.xia_gua}</div>
+          </div>
+          <div>${guaLinesHtml(c.ben_lines, marks)}</div>
+        </div>
+        <div>
+          <table class="table">
+            <tr><th>本卦</th><td class="pillar">${c.ben_gua}</td></tr>
+            <tr><th>动爻</th><td>${c.dong_yao_name}</td></tr>
+            <tr><th>体用</th><td>体${c.ti_gua}（${c.ti_wuxing}） · 用${c.yong_gua}（${c.yong_wuxing}）</td></tr>
+            <tr><th>生克</th><td>${c.relation_text}</td></tr>
+            <tr><th>互卦</th><td>${c.hu_gua}</td></tr>
+            <tr><th>变卦</th><td>${c.bian_gua}</td></tr>
+          </table>
+          <div class="meta" style="margin-top:8px">${c.relation_note}</div>
+          <div class="meta">类象：${c.gua_xiang}</div>
+        </div>
+      </div>
+      <div class="meta" style="margin-top:10px">所问：${c.question}（属${c.category.category}，对应「${c.category.meihua_zhan}」）</div>
+    </div>`;
+}
+
+function renderLiuyaoChart(c) {
+  const rows = [...c.yaos].reverse().map(y => {
+    const marks = [y.shi ? '世' : '', y.ying ? '应' : '', y.dong ? '动' : '',
+                   y.kong ? '旬空' : '', y.yue_po ? '月破' : '', y.ri_chong ? '日冲' : '']
+      .filter(Boolean).join('/');
+    const bian = y.bian_najia ? `${y.bian_liuqin}${y.bian_najia}` : '';
+    return `<tr>
+      <td class="meta">${y.liushen}</td>
+      <td class="meta">${y.fu || ''}</td>
+      <td>${y.liuqin}${y.najia}<span class="meta">（${y.wuxing}）</span></td>
+      <td>${y.yin_yang === '阳' ? '▬▬▬' : '▬ ▬'} ${y.dong ? (y.value === 9 ? '○' : '×') : ''}</td>
+      <td style="color:${marks ? 'var(--accent)' : 'inherit'}">${marks}</td>
+      <td>${bian}</td>
+    </tr>`;
+  }).join('');
+  const marks = {};
+  c.yaos.forEach(y => { if (y.dong) marks[y.pos] = y.value === 9 ? '○' : '×'; });
+  $('result').innerHTML = `
+    <div class="card">
+      <h2 style="margin:0 0 8px;color:var(--accent);font-size:18px">卦象 · 六爻纳甲</h2>
+      <div class="meta">起卦：${c.cast_time}（${c.lunar_text}）　${c.kind === 'auto' ? '系统摇卦' : '手工录入'}</div>
+      <div class="meta">月建：${c.month_jian}　日辰：${c.day_ganzhi}　旬空：${c.xun_kong.join('、')}</div>
+      <div class="row" style="margin-top:12px;align-items:start">
+        <div class="gua"><div>${guaLinesHtml(c.ben_lines, marks, (pos) => {
+          const y = c.yaos[pos - 1];
+          return y.shi ? '世' : (y.ying ? '应' : '');
+        })}</div></div>
+        <div>
+          <table class="table">
+            <tr><th>本卦</th><td class="pillar">${c.ben_gua}</td></tr>
+            <tr><th>卦宫</th><td>${c.gong}宫（${c.gong_wuxing}）</td></tr>
+            <tr><th>世应</th><td>${c.shi_yao}爻世 · ${c.ying_yao}爻应</td></tr>
+            <tr><th>动爻</th><td>${c.dong_yaos.length ? c.dong_yaos.map(p => p + '爻').join('、') : '六爻安静'}</td></tr>
+            <tr><th>变卦</th><td>${c.bian_gua || '无'}</td></tr>
+            <tr><th>参考用神</th><td class="meta">${c.category.yongshen}</td></tr>
+          </table>
+          ${c.missing_liuqin.length ? `<div class="meta" style="margin-top:8px">卦中缺${c.missing_liuqin.join('、')}，伏神：${c.fushen_text}</div>` : ''}
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="table" style="margin-top:14px">
+          <tr><th>六神</th><th>伏神</th><th>本卦</th><th>爻象</th><th>标记</th><th>变卦</th></tr>
+          ${rows}
+        </table>
+      </div>
+      <div class="meta" style="margin-top:10px">所问：${c.question}（属${c.category.category}）</div>
+    </div>`;
+}
+
+/* ---------- 追问 ---------- */
+function bubble(text, role) {
+  const el = document.createElement('div');
+  el.className = 'bubble ' + role;
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = text;
+  el.appendChild(body);
+  $('chatLog').appendChild(el);
+  return el;
+}
+
+async function ask() {
+  const input = $('chatInput');
+  const q = input.value.trim();
+  if (!q || !currentSession) return;
+  const btn = $('btnAsk');
+  input.value = '';
+  btn.disabled = true; btn.textContent = '推演中…';
+  bubble(q, 'user');
+  const pending = bubble('正在参酌古籍…', 'reply');
+  const body = pending.querySelector('.body');
+  let started = false;
+  try {
+    await streamRequest('/api/chat', { session_id: currentSession, question: q, stream: true }, {
+      meta: (m) => {
+        if (m.rewritten_query && m.rewritten_query !== q) {
+          const r = document.createElement('div');
+          r.className = 'rewritten';
+          r.textContent = '理解为：' + m.rewritten_query;
+          pending.appendChild(r);
+        }
+      },
+      delta: (d) => {
+        if (!started) { body.textContent = ''; started = true; }
+        body.textContent += d.text;
+      },
+      done: (d) => {
+        if (!started) body.textContent = '';
+        if (d.sources.length) {
+          const s = document.createElement('div');
+          s.className = 'rewritten';
+          s.textContent = '出处：' + d.sources.map(x => `《${x.book}·${x.chapter}》`).join('、');
+          pending.appendChild(s);
+        }
+      },
+      error: (d) => { body.textContent = '追问失败：' + d.message; },
+    });
+  } catch (e) {
+    body.textContent = '追问失败：' + e.message;
+  } finally {
+    unlocked(btn, '追 问');
+    input.focus();
+  }
+}
+
+loadCities();
+buildYaoRows();
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+# Chroma 向量索引为派生数据（python scripts/ingest_books.py 可重建），不入库
+data/chroma/
